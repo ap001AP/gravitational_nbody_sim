@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <raylib.h>
 
 constexpr double G = 6.67430e-11;
 
@@ -50,10 +51,42 @@ int main()
     // timestep 
     double tau = 0.01;
 
-    // simulation loop
+    // simulation 
     int sim_time = 100;
 
     int N = static_cast<int>(sim_time / tau);
+
+    //raylib initialization
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+
+    double screenOriginX = screenWidth / 2.0;
+    double screenOriginY = screenHeight / 2.0;
+
+    double scale = 1.0; // pixels per unit
+    float radiusScale = 2.0;
+
+    // raylib window
+    InitWindow(screenWidth, screenHeight, "N Body Gravitional Simulator");
+
+    SetTargetFPS(60);
+
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+            ClearBackground(BLACK);
+
+            for (size_t i = 0; i < n; ++i){
+
+                float radius = log10(bodies[i].m);
+                int screenX = (int)(screenOriginX + (bodies[i].x * scale));
+                int screenY = (int)(screenOriginY - (bodies[i].y * scale));
+                float screenR = (radius * radiusScale);
+
+                DrawCircle(screenX, screenY, screenR, WHITE);
+            }
+        EndDrawing();
+    }
+    CloseWindow();
 
     for (int step = 0; step < N; ++step) {
 
