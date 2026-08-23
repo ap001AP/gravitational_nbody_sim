@@ -72,23 +72,6 @@ int main()
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
-        BeginDrawing();
-            ClearBackground(BLACK);
-
-            for (size_t i = 0; i < n; ++i){
-
-                float radius = log10(bodies[i].m);
-                int screenX = (int)(screenOriginX + (bodies[i].x * scale));
-                int screenY = (int)(screenOriginY - (bodies[i].y * scale));
-                float screenR = (radius * radiusScale);
-
-                DrawCircle(screenX, screenY, screenR, WHITE);
-            }
-        EndDrawing();
-    }
-    CloseWindow();
-
-    for (int step = 0; step < N; ++step) {
 
         // Force Calculation
         for (size_t i = 0; i < n; ++i)
@@ -111,24 +94,45 @@ int main()
                 bodies[i].Fx_total += Fx;
                 bodies[i].Fy_total += Fy;
             }
+        }
 
-            // Euler Update
+        // Euler Update
+        for (size_t i = 0; i < n; ++i){
             // acceleration
             bodies[i].ax = bodies[i].Fx_total / bodies[i].m;
             bodies[i].ay = bodies[i].Fy_total / bodies[i].m;
-
             // velocity
             bodies[i].vx = bodies[i].vx + (tau * bodies[i].ax);
             bodies[i].vy = bodies[i].vy + (tau * bodies[i].ay);
-
             // position
             bodies[i].x = bodies[i].x + (tau * bodies[i].vx);
             bodies[i].y = bodies[i].y + (tau * bodies[i].vy);
-
-            // kinetic energy
-            K_total += (1 / 2) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+            // reset force totals
+            bodies[i].Fx_total = 0;
+            bodies[i].Fy_total = 0;
         }
 
+            // kinetic energy
+            // K_total += (1 / 2) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+        
+        BeginDrawing();
+            ClearBackground(BLACK);
+
+            for (size_t i = 0; i < n; ++i){
+
+                float radius = log10(bodies[i].m);
+                int screenX = (int)(screenOriginX + (bodies[i].x * scale));
+                int screenY = (int)(screenOriginY - (bodies[i].y * scale));
+                float screenR = (radius * radiusScale);
+
+                DrawCircle(screenX, screenY, screenR, WHITE);
+            }
+        EndDrawing();
+    }
+    CloseWindow();
+
+
+        /*
         // potential energy 
         int j = n - 1;
         double U_total = 0;
@@ -147,11 +151,10 @@ int main()
             }
             j = n - 1;
         }
+        */
 
-        double E_total = K_total + U_total;
-        std::cout << "Total Energy is : " << E_total << "\n";
-
-    }
+       //double E_total = K_total + U_total;
+       //std::cout << "Total Energy is : " << E_total << "\n";
 
     return 0;
 }
