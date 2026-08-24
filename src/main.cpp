@@ -127,15 +127,28 @@ int main()
             ClearBackground(BLACK);
 
             for (size_t i = 0; i < n; ++i){
-                // trail points from newest -----> oldest of a body
-                for (size_t j = 0; j < (bodies[i].trail.size() - 1); ++j){
-                    int currX = (int)(screenOriginX + (bodies[i].trail[j].x *scale));
-                    int currY = (int)(screenOriginY - (bodies[i].trail[j].y * scale));
-                    int nextX = (int)(screenOriginX + (bodies[i].trail[j+1].x *scale));
-                    int nextY = (int)(screenOriginY - (bodies[i].trail[j+1].y * scale));
-                    DrawLine(currX, currY, nextX, nextY, RED);
-                }
+                // check that we have at least 2 points
+                if (bodies[i].trail.size() > 1){
+                    // trail points from newest -----> oldest of a body
+                    for (size_t j = 0; j < (bodies[i].trail.size() - 1); ++j){
 
+                        Vector2 currPixelPos = {
+                            (float)(screenOriginX + (bodies[i].trail[j].x * scale)),
+                            (float)(screenOriginY - (bodies[i].trail[j].y * scale))};
+                        
+                        Vector2 nextPixelPos = {
+                            (float)(screenOriginX + (bodies[i].trail[j+1].x * scale)),
+                            (float)(screenOriginY - (bodies[i].trail[j+1].y * scale))};
+
+                        // fading the line
+                        float opac = 1.0f - ((float)j / (float)bodies[i].trail.size());
+                        Color line = Fade(RED, opac * 0.7f);
+
+                        float baseThickness = 4.0f;
+                        float currThickness = baseThickness * opac;
+                        DrawLineEx(currPixelPos, nextPixelPos, currThickness, line);
+                    }
+                }
                 float radius = log10(bodies[i].m);
                 int screenX = (int)(screenOriginX + (bodies[i].x * scale));
                 int screenY = (int)(screenOriginY - (bodies[i].y * scale));
