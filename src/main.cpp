@@ -11,6 +11,8 @@ struct Body {
     double vx, vy;
     double ax, ay;
     double Fx_total, Fy_total;
+    std::deque<Vector2> trail;
+    size_t maxTrailLength = 1000;
 };
 
 int main()
@@ -93,6 +95,7 @@ int main()
 
                 bodies[i].Fx_total += Fx;
                 bodies[i].Fy_total += Fy;
+
             }
         }
 
@@ -107,11 +110,16 @@ int main()
             // position
             bodies[i].x = bodies[i].x + (tau * bodies[i].vx);
             bodies[i].y = bodies[i].y + (tau * bodies[i].vy);
+
+            Vector2 currPos = Vector2{(float)(bodies[i].x), (float)(bodies[i].y)};
+            bodies[i].trail.push_front(currPos);
+            if (bodies[i].trail.size() > bodies[i].maxTrailLength)
+                bodies[i].trail.pop_back();
+
             // reset force totals
             bodies[i].Fx_total = 0;
             bodies[i].Fy_total = 0;
         }
-
             // kinetic energy
             // K_total += (1 / 2) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
         
@@ -119,6 +127,14 @@ int main()
             ClearBackground(BLACK);
 
             for (size_t i = 0; i < n; ++i){
+                // trail points from newest -----> oldest of a body
+                for (size_t j = 0; j < (bodies[i].trail.size() - 1); ++j){
+                    int currX = (int)(screenOriginX + (bodies[i].trail[j].x *scale));
+                    int currY = (int)(screenOriginY - (bodies[i].trail[j].y * scale));
+                    int nextX = (int)(screenOriginX + (bodies[i].trail[j+1].x *scale));
+                    int nextY = (int)(screenOriginY - (bodies[i].trail[j+1].y * scale));
+                    DrawLine(currX, currY, nextX, nextY, RED);
+                }
 
                 float radius = log10(bodies[i].m);
                 int screenX = (int)(screenOriginX + (bodies[i].x * scale));
