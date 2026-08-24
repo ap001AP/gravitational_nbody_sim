@@ -68,7 +68,7 @@ int main()
     double scale = 1.0; // pixels per unit
     float radiusScale = 2.0;
 
-    int stepsPerFrame = 20;
+    int stepsPerFrame = 10;
 
     // raylib window
     InitWindow(screenWidth, screenHeight, "N Body Gravitional Simulator");
