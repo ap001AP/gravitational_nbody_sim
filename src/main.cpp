@@ -68,6 +68,8 @@ int main()
     double scale = 1.0; // pixels per unit
     float radiusScale = 2.0;
 
+    int stepsPerFrame = 20;
+
     // raylib window
     InitWindow(screenWidth, screenHeight, "N Body Gravitional Simulator");
 
@@ -75,54 +77,55 @@ int main()
 
     while (!WindowShouldClose()) {
 
-        // Force Calculation
-        for (size_t i = 0; i < n; ++i)
-        {
-            for (size_t j = 0; j < n; ++j)
+        for (size_t x = 0; x < (stepsPerFrame + 1); ++x) {
+
+            // Force Calculation
+            for (size_t i = 0; i < n; ++i)
             {
+                for (size_t j = 0; j < n; ++j)
+                {
 
-                if (i == j)
-                    continue;
+                    if (i == j)
+                        continue;
 
-                double dx = bodies[j].x - bodies[i].x;
-                double dy = bodies[j].y - bodies[i].y;
+                    double dx = bodies[j].x - bodies[i].x;
+                    double dy = bodies[j].y - bodies[i].y;
 
-                double r = sqrt((dx * dx) + (dy * dy));
-                double F = (G * bodies[i].m * bodies[j].m) / (r * r);
+                    double r = sqrt((dx * dx) + (dy * dy));
+                    double F = (G * bodies[i].m * bodies[j].m) / (r * r);
 
-                double Fx = F * (dx / r);
-                double Fy = F * (dy / r);
+                    double Fx = F * (dx / r);
+                    double Fy = F * (dy / r);
 
-                bodies[i].Fx_total += Fx;
-                bodies[i].Fy_total += Fy;
-
+                    bodies[i].Fx_total += Fx;
+                    bodies[i].Fy_total += Fy;
+                }
             }
-        }
 
-        // Euler Update
-        for (size_t i = 0; i < n; ++i){
-            // acceleration
-            bodies[i].ax = bodies[i].Fx_total / bodies[i].m;
-            bodies[i].ay = bodies[i].Fy_total / bodies[i].m;
-            // velocity
-            bodies[i].vx = bodies[i].vx + (tau * bodies[i].ax);
-            bodies[i].vy = bodies[i].vy + (tau * bodies[i].ay);
-            // position
-            bodies[i].x = bodies[i].x + (tau * bodies[i].vx);
-            bodies[i].y = bodies[i].y + (tau * bodies[i].vy);
+            // Euler Update
+            for (size_t i = 0; i < n; ++i){
+                // acceleration
+                bodies[i].ax = bodies[i].Fx_total / bodies[i].m;
+                bodies[i].ay = bodies[i].Fy_total / bodies[i].m;
+                // velocity
+                bodies[i].vx = bodies[i].vx + (tau * bodies[i].ax);
+                bodies[i].vy = bodies[i].vy + (tau * bodies[i].ay);
+                // position
+                bodies[i].x = bodies[i].x + (tau * bodies[i].vx);
+                bodies[i].y = bodies[i].y + (tau * bodies[i].vy);
 
-            Vector2 currPos = Vector2{(float)(bodies[i].x), (float)(bodies[i].y)};
-            bodies[i].trail.push_front(currPos);
-            if (bodies[i].trail.size() > bodies[i].maxTrailLength)
-                bodies[i].trail.pop_back();
+                Vector2 currPos = Vector2{(float)(bodies[i].x), (float)(bodies[i].y)};
+                bodies[i].trail.push_front(currPos);
+                if (bodies[i].trail.size() > bodies[i].maxTrailLength)
+                    bodies[i].trail.pop_back();
 
-            // reset force totals
-            bodies[i].Fx_total = 0;
-            bodies[i].Fy_total = 0;
-        }
+                // reset force totals
+                bodies[i].Fx_total = 0;
+                bodies[i].Fy_total = 0;
+            }
             // kinetic energy
             // K_total += (1 / 2) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
-        
+        }
         BeginDrawing();
             ClearBackground(BLACK);
 
@@ -159,7 +162,6 @@ int main()
         EndDrawing();
     }
     CloseWindow();
-
 
         /*
         // potential energy 
