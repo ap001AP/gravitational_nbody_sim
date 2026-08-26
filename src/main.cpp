@@ -1,8 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <raylib.h>
+#include <cmath>
+#include <iomanip>
 
-constexpr double G = 6.67430e-11;
+// G = 6.67430e-11
+constexpr double G = 1.000;
 
 // Declaring a Body structure
 struct Body {
@@ -28,7 +31,7 @@ int main()
     Body mass2{
         10,
         100, 0,
-        0, 5,
+        0, 3.16,
         0, 0,
         0, 0};
 
@@ -48,15 +51,33 @@ int main()
 
     size_t n = bodies.size();
 
+    // calculating initial energy
     double K_total = 0;
+    for (size_t i = 0; i < n; ++i){
+        K_total += (0.5) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+    }
+
+    double U_total = 0;
+    for (size_t i = 0; i < (n-1); ++i)
+    {
+        for (size_t j = n - 1; j > i; --j)
+        {
+
+            double dx = bodies[j].x - bodies[i].x;
+            double dy = bodies[j].y - bodies[i].y;
+
+            double r = sqrt((dx * dx) + (dy * dy));
+
+            U_total += (-1 * (G * bodies[i].m * bodies[j].m)) / r;
+        }
+    }
+
+    double E_total = K_total + U_total;
 
     // timestep 
     double tau = 0.01;
-
-    // simulation 
-    int sim_time = 100;
-
-    int N = static_cast<int>(sim_time / tau);
+    double simulationTime = 0.0;
+    int sim_units = 100;
 
     //raylib initialization
     const int screenWidth = 800;
@@ -70,6 +91,11 @@ int main()
 
     int stepsPerFrame = 10;
 
+    double initialEnergy = E_total;
+    double finalEnergy = E_total;
+
+    bool validationComplete = false;
+
     // raylib window
     InitWindow(screenWidth, screenHeight, "N Body Gravitional Simulator");
 
@@ -77,7 +103,7 @@ int main()
 
     while (!WindowShouldClose()) {
 
-        for (size_t x = 0; x < (stepsPerFrame + 1); ++x) {
+        for (size_t x = 0; x < stepsPerFrame; ++x) {
 
             // Force Calculation
             for (size_t i = 0; i < n; ++i)
@@ -123,9 +149,43 @@ int main()
                 bodies[i].Fx_total = 0;
                 bodies[i].Fy_total = 0;
             }
-            // kinetic energy
-            // K_total += (1 / 2) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+
+            simulationTime += tau;
         }
+
+        // kinetic energy
+        K_total = 0;
+        for (size_t i = 0; i < n; ++i){
+            K_total += (0.5) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+        }
+
+        // potential energy 
+        U_total = 0;
+        for (size_t i = 0; i < (n-1); ++i)
+        {
+            for (size_t j = n - 1; j > i; --j)
+            {
+
+                double dx = bodies[j].x - bodies[i].x;
+                double dy = bodies[j].y - bodies[i].y;
+
+                double r = sqrt((dx * dx) + (dy * dy));
+
+                U_total += (-1 * (G * bodies[i].m * bodies[j].m)) / r;
+            }
+        }
+
+        E_total = K_total + U_total;
+
+        if (simulationTime >= sim_units && !validationComplete)
+        {
+            double energyError = ((std::abs(finalEnergy - initialEnergy)) / std::abs(initialEnergy)) * 100.0;
+            std::cout << std::setprecision(10);
+            std::cout << "Initial Energy: " << initialEnergy << " Final Energy: " << finalEnergy << "\n";
+            std::cout << "Error: " << energyError << "%\n";
+            validationComplete = true;
+        }
+
         BeginDrawing();
             ClearBackground(BLACK);
 
@@ -163,29 +223,6 @@ int main()
     }
     CloseWindow();
 
-        /*
-        // potential energy 
-        int j = n - 1;
-        double U_total = 0;
-
-        for (size_t i = 0; i < j; ++i){
-            while (i < j){
-
-                double dx = bodies[j].x - bodies[i].x;
-                double dy = bodies[j].y - bodies[i].y;
-
-                double r = sqrt((dx * dx) + (dy * dy));
-
-                U_total += (-1 * (G * bodies[i].m * bodies[j].m)) / r;
-
-                j -= 1;
-            }
-            j = n - 1;
-        }
-        */
-
-       //double E_total = K_total + U_total;
-       //std::cout << "Total Energy is : " << E_total << "\n";
 
     return 0;
 }
