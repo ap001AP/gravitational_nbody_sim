@@ -1,6 +1,6 @@
 # Validation Results — Euler Integration
 
-This branch documents validation of the [v1_euler_update branch](https://github.com/ap001AP/gravitational_nbody_sim/tree/v1_euler_update) simulator.
+This branch documents validation of the [`v1_euler_update`](https://github.com/ap001AP/gravitational_nbody_sim/tree/v1_euler_update) simulator.
 
 ## 1. Two-Body Circular Orbit
 **Test 1:** Confirm the orbit doesn't spiral in or out.
