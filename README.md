@@ -22,7 +22,7 @@ The project is planned across three phases of increasing complexity:
 - Euler integration conserves energy reasonably well over short-to-moderate timescales, but conservation quality depends heavily on the orbital configuration — symmetric, equal-mass setups show far less drift (~10⁻⁷ %) than eccentric, high-mass-ratio setups with close encounters (~10⁻³ %).
 - The three-body system shows clear sensitivity to initial conditions, with a small perturbation (Δx = 0.1) leading to sustained, growing divergence over time — though sub-exponential rather than strictly chaotic in the Lyapunov sense over the tested timescale.
 
-See the `v1_testing` branch README for full validation details, plots, and GIFs.
+See the [`v1_testing`](https://github.com/ap001AP/gravitational_nbody_sim/tree/v1_testing) branch README for full validation details, plots, and GIFs.
 
 ## Dependencies
 - [raylib](https://www.raylib.com/)
