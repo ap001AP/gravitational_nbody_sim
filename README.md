@@ -13,7 +13,7 @@ A basic N-body gravitational simulator written in C++, using direct O(N²) pairw
 - Euler integration is a first-order method and does not conserve energy exactly — total energy will drift over time. This is expected behavior for this integrator, not a bug.
 - Energy tracking (kinetic + potential) is present in the code but currently commented out / unused in this branch — it was scaffolded for validation purposes but not active during normal runs. See the [`v1_testing`](https://github.com/ap001AP/gravitational_nbody_sim/tree/v1_testing) branch for active energy conservation measurement and analysis.
 - Using real SI values for `G` alongside small, simulation-friendly mass/distance/velocity values means the resulting gravitational forces are extremely weak relative to real astronomical scales — this branch is focused on validating the simulation mechanics, not modeling a physically realistic system.
-- No spatial partitioning (e.g. Barnes-Hut) — force calculation is O(N²), which will not scale to large N. This is addressed in Level 2.
+- No spatial partitioning (e.g. Barnes-Hut) — force calculation is O(N²), which will not scale to large N. This is addressed in phase 2.
 - No data export (CSV) in this branch — output is visual only, via the raylib render loop. Data logging for validation was added separately in [`v1_testing`](https://github.com/ap001AP/gravitational_nbody_sim/tree/v1_testing).
 
 ## Code Structure
