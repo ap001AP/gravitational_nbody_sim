@@ -8,11 +8,11 @@ final_energy = data["Energy"].iloc[-1]
 energy_error = (abs(final_energy - initial_energy) / abs(initial_energy))*100
 
 plt.plot(data["Time"], data["Energy"])
-plt.axhline(initial_energy, color="gray", linestyle="--", label="E_initial")
+plt.axhline(initial_energy, color="green", linestyle="--", label="E_initial")
 plt.axhline(final_energy, color="red", linestyle="--", label="E_final")
 
-plt.xlabel("Time")
-plt.ylabel("Energy")
+plt.xlabel("Time (s)")
+plt.ylabel("Energy (J)")
 plt.title("Energy Conservation Over Time")
 
 plt.xlim(0, data["Time"].iloc[-1])

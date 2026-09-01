@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <deque>
 
 // G = 6.67430e-11
 constexpr double G = 1.000;
@@ -11,11 +12,11 @@ constexpr double G = 1.000;
 // Declaring a Body structure
 struct Body {
     double m;
-    double x, y;
-    double vx, vy;
-    double ax, ay;
-    double Fx_total, Fy_total;
-    std::deque<Vector2> trail;
+    double x, y, z;
+    double vx, vy, vz;
+    double ax, ay, az;
+    double Fx_total, Fy_total, Fz_total;
+    std::deque<Vector3> trail;
     size_t maxTrailLength = 1000;
 };
 
@@ -34,31 +35,85 @@ void updatePhysics(std::vector<Body>& bodies, double tau, double& K_total, doubl
 
             double dx = bodies[j].x - bodies[i].x;
             double dy = bodies[j].y - bodies[i].y;
+            double dz = bodies[j].z - bodies[i].z;
 
-            double r = sqrt((dx * dx) + (dy * dy));
+            double r = sqrt((dx * dx) + (dy * dy) + (dz * dz));
             double F = (G * bodies[i].m * bodies[j].m) / (r * r);
 
             double Fx = F * (dx / r);
             double Fy = F * (dy / r);
+            double Fz = F * (dz / r);
 
             bodies[i].Fx_total += Fx;
             bodies[i].Fy_total += Fy;
+            bodies[i].Fz_total += Fz;
         }
     }
 
-    // Euler Update
+    // Velocity Verlet
     for (size_t i = 0; i < n; ++i){
-        // acceleration
+
+        // current acceleration
         bodies[i].ax = bodies[i].Fx_total / bodies[i].m;
         bodies[i].ay = bodies[i].Fy_total / bodies[i].m;
-        // velocity
-        bodies[i].vx = bodies[i].vx + (tau * bodies[i].ax);
-        bodies[i].vy = bodies[i].vy + (tau * bodies[i].ay);
-        // position
-        bodies[i].x = bodies[i].x + (tau * bodies[i].vx);
-        bodies[i].y = bodies[i].y + (tau * bodies[i].vy);
+        bodies[i].az = bodies[i].Fz_total / bodies[i].m;
 
-        Vector2 currPos = Vector2{(float)(bodies[i].x), (float)(bodies[i].y)};
+        // new position
+        bodies[i].x = bodies[i].x + (tau * bodies[i].vx) +(0.5*bodies[i].ax*(tau*tau));
+        bodies[i].y = bodies[i].y + (tau * bodies[i].vy) +(0.5*bodies[i].ay*(tau*tau));
+        bodies[i].z = bodies[i].z + (tau * bodies[i].vz) +(0.5*bodies[i].az*(tau*tau));
+
+        // reset force totals
+        bodies[i].Fx_total = 0;
+        bodies[i].Fy_total = 0;
+        bodies[i].Fz_total = 0;
+    }
+        
+    // new acceleration
+    for (size_t i = 0; i < n; ++i)
+    {
+        for (size_t j = 0; j < n; ++j)
+        {
+
+            if (i == j)
+                continue;
+
+            double dx = bodies[j].x - bodies[i].x;
+            double dy = bodies[j].y - bodies[i].y;
+            double dz = bodies[j].z - bodies[i].z;
+
+            double r = sqrt((dx * dx) + (dy * dy) + (dz * dz));
+            double F = (G * bodies[i].m * bodies[j].m) / (r * r);
+
+            double Fx = F * (dx / r);
+            double Fy = F * (dy / r);
+            double Fz = F * (dz / r);
+
+            bodies[i].Fx_total += Fx;
+            bodies[i].Fy_total += Fy;
+            bodies[i].Fz_total += Fz;
+        }
+
+    }
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        // copy current acceleration before we update it with new position
+        double copy_ax = bodies[i].ax;
+        double copy_ay = bodies[i].ay;
+        double copy_az = bodies[i].az;
+
+        // new acceleration
+        bodies[i].ax = bodies[i].Fx_total / bodies[i].m;
+        bodies[i].ay = bodies[i].Fy_total / bodies[i].m;
+        bodies[i].az = bodies[i].Fz_total / bodies[i].m;
+
+        // new velocity
+        bodies[i].vx = bodies[i].vx + (0.5*(copy_ax + bodies[i].ax))*tau;
+        bodies[i].vy = bodies[i].vy + (0.5*(copy_ay + bodies[i].ay))*tau;
+        bodies[i].vz = bodies[i].vz + (0.5*(copy_az + bodies[i].az))*tau;
+
+        Vector3 currPos = Vector3{(float)(bodies[i].x), (float)(bodies[i].y), (float)(bodies[i].z)};
         bodies[i].trail.push_front(currPos);
         if (bodies[i].trail.size() > bodies[i].maxTrailLength)
             bodies[i].trail.pop_back();
@@ -66,11 +121,13 @@ void updatePhysics(std::vector<Body>& bodies, double tau, double& K_total, doubl
         // reset force totals
         bodies[i].Fx_total = 0;
         bodies[i].Fy_total = 0;
+        bodies[i].Fz_total = 0;
     }
-    // calculating initial energy
+
+    // calculating energy (kinetic + potential)
     K_total = 0;
     for (size_t i = 0; i < n; ++i){
-        K_total += (0.5) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
+        K_total += (0.5) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy) + (bodies[i].vz * bodies[i].vz));
     }
 
     U_total = 0;
@@ -78,32 +135,17 @@ void updatePhysics(std::vector<Body>& bodies, double tau, double& K_total, doubl
     {
         for (size_t j = n - 1; j > i; --j)
         {
-
             double dx = bodies[j].x - bodies[i].x;
             double dy = bodies[j].y - bodies[i].y;
+            double dz = bodies[j].z - bodies[i].z;
 
-            double r = sqrt((dx * dx) + (dy * dy));
+            double r = sqrt((dx * dx) + (dy * dy) + (dz * dz));
 
             U_total += (-1 * (G * bodies[i].m * bodies[j].m)) / r;
         }
     }
-
     E_total = K_total + U_total;
 }
-
-/*
-void saveSeparationData(std::vector<double> timeData, std::vector<double> separationData){
-    std::ofstream file("../analysis/separation.csv");
-
-    file << "Time,Separation\n";
-
-    for (size_t i = 0; i < timeData.size(); ++i) {
-        file << timeData[i] << "," << separationData[i] << "\n";
-    }
-
-    file.close();
-}
-*/
 
 void saveEnergyData(std::vector<double> timeData, std::vector<double> energyData){
         std::ofstream file("../analysis/energy.csv");
@@ -119,47 +161,50 @@ void saveEnergyData(std::vector<double> timeData, std::vector<double> energyData
 
 }
 
+
 int main()
 {
-    
+
+
     Body mass1{
         10,
-        -50, 0,       // position
-        0, 3,         // velocity
-        0, 0,         // acceleration
-        0, 0          // force
+        -50, 0, 50,       // position
+        0, 3, 0,         // velocity
+        0, 0, 0,        // acceleration
+        0, 0, 0,          // force
     };
 
     Body mass2{
         10,
-        50, 0,
-        0, -3,
-        0, 0,
-        0, 0
+        50, 0, -50,
+        0, -3, 0,
+        0, 0, 0,
+        0, 0, 0,
     };
 
     Body mass3{
         10,
-        0, 50,
-        3, 0,
-        0, 0,
-        0, 0
+        0, 50, 0,
+        3, 0, 0,
+        0, 0, 0,
+        0, 0, 0,
     };
+
     
 /*
     Body mass1{
         1000,
-        0, 0, // position
-        0, 0, // velocity
-        0, 0, // acceleration
-        0, 0}; // force
+        0, 0, 0, // position
+        0, 0, 0,// velocity
+        0, 0, 0, // acceleration
+        0, 0, 0}; // force
 
     Body mass2{
         10,
-        100, 0,
-        0, 3.16,
-        0, 0,
-        0, 0};
+        100, 0, 0,
+        0, 3.16228, 0,
+        0, 0, 0,
+        0, 0, 0};
 
     Body mass3{
         5,
@@ -174,23 +219,13 @@ int main()
     bodiesA.push_back(mass2);
     bodiesA.push_back(mass3);
     
-    /*
-    std::vector<Body> bodiesB;
-    bodiesB.push_back(mass1);
-    bodiesB.push_back(mass2);
-    bodiesB.push_back(mass3);
-
-    bodiesB[2].x += 0.1;
-    */
 
     size_t nA = bodiesA.size();
-    // size_t nB = bodiesB.size();
-
     
-    // calculating initial energy
+    // calculating initial energy (kinetic + potential)
     double K_total = 0;
     for (size_t i = 0; i < nA; ++i){
-        K_total += (0.5) * bodiesA[i].m * ((bodiesA[i].vx * bodiesA[i].vx) + (bodiesA[i].vy * bodiesA[i].vy));
+        K_total += (0.5) * bodiesA[i].m * ((bodiesA[i].vx * bodiesA[i].vx) + (bodiesA[i].vy * bodiesA[i].vy) + (bodiesA[i].vz * bodiesA[i].vz));
     }
 
     double U_total = 0;
@@ -198,16 +233,14 @@ int main()
     {
         for (size_t j = nA - 1; j > i; --j)
         {
-
             double dx = bodiesA[j].x - bodiesA[i].x;
             double dy = bodiesA[j].y - bodiesA[i].y;
-
-            double r = sqrt((dx * dx) + (dy * dy));
+            double dz = bodiesA[j].z - bodiesA[i].z;
+            double r = sqrt((dx * dx) + (dy * dy) + (dz * dz));
 
             U_total += (-1 * (G * bodiesA[i].m * bodiesA[j].m)) / r;
         }
     }
-
     double E_total = K_total + U_total;
 
     // timestep 
@@ -215,12 +248,8 @@ int main()
     double simulationTime = 0.0;
     double simulationEnd = 1000.0;
 
-    double nextPrintTime = 10.0;
-
     std::vector<double> timeData;
-    //std::vector<double> separationData;
     std::vector<double> energyData;
-
     timeData.push_back(0.0);
     energyData.push_back(E_total);
 
@@ -231,28 +260,34 @@ int main()
     double screenOriginX = screenWidth / 2.0;
     double screenOriginY = screenHeight / 2.0;
 
-    double scale = 1.0; // pixels per unit
     float radiusScale = 2.0;
 
     int stepsPerFrame = 10;
 
-
     double initialEnergy = E_total;
     double finalEnergy = E_total;
-
-    // bool validationComplete = false;
 
     // raylib window
     InitWindow(screenWidth, screenHeight, "N Body Gravitional Simulator");
 
     SetTargetFPS(60);
 
+    // 3_D camera initialization
+    Camera3D camera = {0};
+    // elevated perspective to see the depth
+    camera.position = (Vector3){0.0f, 120.0f, 150.0f};
+    // looking at the center of coordinate space
+    camera.target = (Vector3){0.0f, 0.0f, 0.0f}; 
+    // setting y-axis as up
+    camera.up = (Vector3){0.0f, 1.0f, 0.0f};
+    camera.fovy = 45.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
+
     while (!WindowShouldClose() && simulationTime < simulationEnd) {
 
         for (size_t x = 0; x < stepsPerFrame; ++x) {
 
             updatePhysics(bodiesA, tau, K_total, U_total, E_total);
-            //updatePhysics(bodiesB, tau);
 
             simulationTime += tau;
         }
@@ -260,133 +295,46 @@ int main()
         timeData.push_back(simulationTime);
         energyData.push_back(E_total);
 
-        /*
-        double dx = bodiesA[2].x - bodiesB[2].x;
-        double dy = bodiesA[2].y - bodiesB[2].y;
-
-        double separation = sqrt(dx * dx + dy * dy);
-
-        timeData.push_back(simulationTime);
-        separationData.push_back(separation);
-
-        if (simulationTime >= nextPrintTime) {
-            std::cout << "Time: " << simulationTime << " Separation: " << separation << "\n";
-            nextPrintTime += 10.0;
-        }
-        */
-
-        /*
-        // kinetic energy
-        K_total = 0;
-        for (size_t i = 0; i < n; ++i){
-            K_total += (0.5) * bodies[i].m * ((bodies[i].vx * bodies[i].vx) + (bodies[i].vy * bodies[i].vy));
-        }
-
-        // potential energy 
-        U_total = 0;
-        for (size_t i = 0; i < (n-1); ++i)
-        {
-            for (size_t j = n - 1; j > i; --j)
-            {
-
-                double dx = bodies[j].x - bodies[i].x;
-                double dy = bodies[j].y - bodies[i].y;
-
-                double r = sqrt((dx * dx) + (dy * dy));
-
-                U_total += (-1 * (G * bodies[i].m * bodies[j].m)) / r;
-            }
-        }
-
-        E_total = K_total + U_total;
-
-        if (simulationTime >= sim_units && !validationComplete)
-        {
-            double energyError = ((std::abs(finalEnergy - initialEnergy)) / std::abs(initialEnergy)) * 100.0;
-            std::cout << std::setprecision(10);
-            std::cout << "Initial Energy: " << initialEnergy << " Final Energy: " << finalEnergy << "\n";
-            std::cout << "Error: " << energyError << "%\n";
-            validationComplete = true;
-        }
-        */
-
+        UpdateCamera(&camera, CAMERA_ORBITAL);
         BeginDrawing();
             ClearBackground(BLACK);
 
-            for (size_t i = 0; i < nA; ++i){
-                // check that we have at least 2 points
-                if (bodiesA[i].trail.size() > 1){
-                    // trail points from newest -----> oldest of a body
-                    for (size_t j = 0; j < (bodiesA[i].trail.size() - 1); ++j){
+            // activate 3d rendering
+            BeginMode3D(camera);
 
-                        Vector2 currPixelPos = {
-                            (float)(screenOriginX + (bodiesA[i].trail[j].x * scale)),
-                            (float)(screenOriginY - (bodiesA[i].trail[j].y * scale))};
-                        
-                        Vector2 nextPixelPos = {
-                            (float)(screenOriginX + (bodiesA[i].trail[j+1].x * scale)),
-                            (float)(screenOriginY - (bodiesA[i].trail[j+1].y * scale))};
+                for (size_t i = 0; i < nA; ++i){
+                    // check that we have at least 2 points
+                    if (bodiesA[i].trail.size() > 1){
+                        // trail points from newest -----> oldest of a body
+                        for (size_t j = 0; j < (bodiesA[i].trail.size() - 1); ++j){
 
-                        // fading the line
-                        float opac = 1.0f - ((float)j / (float)bodiesA[i].trail.size());
-                        Color line = Fade(RED, opac * 0.7f);
+                            Vector3 currWorldPos = bodiesA[i].trail[j];
+                            Vector3 nextWorldPos = bodiesA[i].trail[j + 1];
 
-                        float baseThickness = 4.0f;
-                        float currThickness = baseThickness * opac;
-                        DrawLineEx(currPixelPos, nextPixelPos, currThickness, line);
+                            // fading the line
+                            float opac = 1.0f - ((float)j / (float)bodiesA[i].trail.size());
+                            Color line = Fade(RED, opac * 0.7f);
+
+                            DrawLine3D(currWorldPos, nextWorldPos, line);
+                        }
                     }
+                    //Draw body
+                    float radius = log10(bodiesA[i].m) * radiusScale;
+                    Vector3 bodypos = {(float)bodiesA[i].x, (float)bodiesA[i].y, (float)bodiesA[i].z};
+
+                    DrawSphere(bodypos, radius, WHITE);
+                    // overlay wire mesh for depth perception
+                    DrawSphereWires(bodypos, radius, 8, 8, RED);
                 }
-                //Draw body
-                float radius = log10(bodiesA[i].m);
-                int screenX = (int)(screenOriginX + (bodiesA[i].x * scale));
-                int screenY = (int)(screenOriginY - (bodiesA[i].y * scale));
-                float screenR = (radius * radiusScale);
-
-                DrawCircle(screenX, screenY, screenR, WHITE);
-            }
-
-            /*
-            for (size_t i = 0; i < nB; ++i){
-                // check that we have at least 2 points
-                if (bodiesB[i].trail.size() > 1){
-                    // trail points from newest -----> oldest of a body
-                    for (size_t j = 0; j < (bodiesB[i].trail.size() - 1); ++j){
-
-                        Vector2 currPixelPos = {
-                            (float)(screenOriginX + 200 + (bodiesB[i].trail[j].x * scale)),
-                            (float)(screenOriginY - (bodiesB[i].trail[j].y * scale))};
-                        
-                        Vector2 nextPixelPos = {
-                            (float)(screenOriginX + 200 + (bodiesB[i].trail[j+1].x * scale)),
-                            (float)(screenOriginY - (bodiesB[i].trail[j+1].y * scale))};
-
-                        // fading the line
-                        float opac = 1.0f - ((float)j / (float)bodiesB[i].trail.size());
-                        Color line = Fade(RED, opac * 0.7f);
-
-                        float baseThickness = 4.0f;
-                        float currThickness = baseThickness * opac;
-                        DrawLineEx(currPixelPos, nextPixelPos, currThickness, line);
-                    }
-                }
-                //Draw body
-                float radius = log10(bodiesB[i].m);
-                int screenX = (int)(screenOriginX + 200 + (bodiesB[i].x * scale));
-                int screenY = (int)(screenOriginY - (bodiesB[i].y * scale));
-                float screenR = (radius * radiusScale);
-
-                DrawCircle(screenX, screenY, screenR, WHITE);
-            }
-            */
-
+            EndMode3D();
         EndDrawing();
     }
     CloseWindow();
+
     finalEnergy = E_total;
     double energyError = ((std::abs(finalEnergy - initialEnergy)) / std::abs(initialEnergy)) * 100.0;
     std::cout << "Error: " << energyError << "%\n";
 
-    //saveSeparationData(timeData, separationData);
     saveEnergyData(timeData, energyData);
 
     return 0;
